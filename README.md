@@ -31,14 +31,16 @@ started, pid = 14648.
 stop foo (pid=14648) ...
 
 ## Usage
+```
 usage: app <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
        app <run-all>|<kill-all>
        app <s|status> [<service-name>]
        app <e|enable>|<d|disable> <service-name>
        app <l|list>
        app <init>
-
+```
 ## Manual
+```
   ${APP_DIR}/user/ -- *.service files, defined by user
   ${APP_DIR}/work/ -- symbol link of *.service, it created or deleted by <enable> and <disable> command,
                     prohibit manually work in this dir for will be removed automaticlly.
@@ -47,3 +49,4 @@ usage: app <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
   service file format:
     [Service]
     ExecStart=<command> [arguments]  -- ONLY ABSOLUTE PATH SUPPORTED.
+```
