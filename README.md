@@ -3,11 +3,10 @@
 management user application like systemd.
 
 ## Tech Notes
-> * use ```$ExecStarCommand > ${APP_DIR}/log/${APP_NAME}.log  2>&1 &&``` command to execute user define command,
-    screen output redirected to log file.
-> * use APP_NAME to management service or application instead of input long command line,
-    the command line save in ${APP_DIR}/user/*.service file, such as foo.service, APP_NAME is "foo".
-> * use pid to monitor the status of service or application,
+ * use ```$ExecStarCommand > ${APP_DIR}/log/${APP_NAME}.log  2>&1 &&``` command to execute user define command, stdout and stderr redirected to log file.
+ * use APP_NAME to management service or application instead of input long command line,
+    the command line saved in ${APP_DIR}/user/*.service file, such as foo.service, APP_NAME is "foo".
+ * use pid to monitor the status of service or application,
     use kill -9 <pid> to stop the service or application.
 
 ## Install and example
@@ -22,13 +21,13 @@ EOF
 ```
 > * (4) "app enable foo" to enable foo service.
 > * (5) "app run foo" to run foo service.
-start foo ...
-/usr/bin/tail -f /var/log/system.log
-started, pid = 14648.
+>> start foo ...
+>> /usr/bin/tail -f /var/log/system.log
+>> started, pid = 14648.
 > * (6) "app status foo" to show status of foo service.
- active (running)  [foo] -- 14648 /usr/bin/tail -f /var/log/system.log
+>> active (running)  [foo] -- 14648 /usr/bin/tail -f /var/log/system.log
 > * (7) "app kill foo" to stop foo service.
-stop foo (pid=14648) ...
+>> stop foo (pid=14648) ...
 
 ## Usage
 ```
