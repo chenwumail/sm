@@ -1,4 +1,6 @@
-application manager (app): management user application like systemd
+Application Manager (app)
+
+management user application like systemd.
 
 There have 3 solution behind tools:
 (1) use ```$ExecStarCommand > ${APP_DIR}/log/${APP_NAME}.log  2>&1 &&``` command to execute user define command,
@@ -12,15 +14,19 @@ It very install on shell based os:
 (1) copy "app" file to /usr/bin
 (2) "app init" to create ${HOME}/app directory and sub directory.
 (3) put some service file to ${HOME}/app/user directory, such as:
-echo << EOF
+cat > ${HOME}/app/user/foo.service <<EOF
 [Service]
 ExecStart=/usr/bin/tail -f /var/log/system.log
-EOF > ${HOME}/app/user/foo.service
+EOF
 (4) "app enable foo" to enable foo service.
 (5) "app run foo" to run foo service.
+start foo ...
+/usr/bin/tail -f /var/log/system.log
+started, pid = 14648.
 (6) "app status foo" to show status of foo service.
+ active (running)  [foo] -- 14648 /usr/bin/tail -f /var/log/system.log
 (7) "app kill foo" to stop foo service.
-
+stop foo (pid=14648) ...
 
 
 usage: app <r|run|start>|<k|kill|stop>|<re|restart> <service-name>

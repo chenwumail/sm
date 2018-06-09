@@ -31,7 +31,7 @@ usage() {
   echo "    ExecStart=<command> [arguments]  -- ONLY ABSOLUTE PATH SUPPORTED."
 }
 
-############### svc main ##################
+############### app main ##################
 app_cmd=$1
 app_name=$2
 if [ "x${app_cmd}" == "x" ]; then
@@ -187,4 +187,4 @@ case $app_cmd in
     ;;
 esac
 
-############### svc main end ################
+############### app main end ################
