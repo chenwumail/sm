@@ -19,14 +19,14 @@ cat > ${HOME}/sm/user/foo.service <<EOF
 ExecStart=/usr/bin/tail -f /var/log/system.log
 EOF
 ```
-> * (4) "sm enable foo" to enable foo service.
-> * (5) "sm run foo" to run foo service.
+ * (4) "sm enable foo" to enable foo service.
+ * (5) "sm run foo" to run foo service.
 >> start foo ...
 >> /usr/bin/tail -f /var/log/system.log
 >> started, pid = 14648.
-> * (6) "sm status foo" to show status of foo service.
+ * (6) "sm status foo" to show status of foo service.
 >> active (running)  [foo] -- 14648 /usr/bin/tail -f /var/log/system.log
-> * (7) "sm kill foo" to stop foo service.
+ * (7) "sm kill foo" to stop foo service.
 >> stop foo (pid=14648) ...
 
 ## Usage
@@ -39,7 +39,8 @@ usage: sm <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
        sm <init>
 ```
 ## Manual
-```
+  `$SM_DIR` default is `$HOME/sm`， type `sm` without arguments will show it.
+```  
   ${SM_DIR}/user/ -- *.service files, defined by user
   ${SM_DIR}/work/ -- symbol link of *.service, it created or deleted by <enable> and <disable> command,
                     prohibit manually work in this dir for will be removed automaticlly.
