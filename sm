@@ -1,0 +1,209 @@
+#!/bin/sh
+# version 1.0  License: GPL 2.0
+# author: chenwumail@gmail.com 2018
+
+if [ "x${SM_DIR}" == "x" ]; then
+  SM_DIR=${HOME}/sm #default svc dir is /home/{work}/app
+fi
+
+
+read_ini () {
+  file=$1;section=$2;item=$3;
+  val=$(awk -F '=' '/\['${section}'\]/{a=1} (a==1 && "'${item}'"==$1){print}' ${file}) 
+  echo ${val#*=}
+}
+usage() {
+  echo "SM_DIR=${SM_DIR}"
+  echo "usage: sm <r|run|start>|<k|kill|stop>|<re|restart> <service-name>"
+  echo "       sm <run-all>|<kill-all>"
+  echo "       sm <s|status> [<service-name>]"
+  echo "       sm <e|enable>|<d|disable> <service-name>"
+  echo "       sm <l|list>"
+  echo "       sm <init>"
+  echo "application manager (app) manual:"
+  echo "  \${SM_DIR}/user/ -- *.service files, defined by user"
+  echo "  \${SM_DIR}/work/ -- symbol link of *.service, it created or deleted by <enable> and <disable> command",
+  echo "                    prohibit manually work in this dir for will be removed automaticlly."
+  echo "  \${SM_DIR}/pid/ -- *.pid files, auto generated"
+  echo "  \${SM_DIR}/log/ -- *.log files, auto generated"
+  echo "  service file format:"
+  echo "    [Service]"
+  echo "    ExecStart=<command> [arguments]  -- ONLY ABSOLUTE PATH SUPPORTED."
+}
+
+############### svc main ##################
+sm_cmd=$1
+sm_name=$2
+if [ "x${sm_cmd}" == "x" ]; then
+  usage
+  exit 1
+fi
+case $sm_cmd in
+  # one initilize command, careful for SM_DIR, default is ${HOME}/app
+  init)
+    echo "SM_DIR=${SM_DIR}"
+    test -d ${SM_DIR}/user || mkdir -p ${SM_DIR}/user
+    test -d ${SM_DIR}/work || mkdir -p ${SM_DIR}/work
+    test -d ${SM_DIR}/pid  || mkdir -p ${SM_DIR}/pid
+    test -d ${SM_DIR}/log  || mkdir -p ${SM_DIR}/log
+    ;;  
+  # two command for app service in user directory
+  l)
+    applist=$(ls ${SM_DIR}/user/)
+    for app in $applist
+    do
+      name=${app%%.*}
+      /bin/echo -n "$name "
+    done
+    echo ""
+    ;;
+  list)
+    applist=$(ls ${SM_DIR}/user/)
+    for app in $applist
+    do
+      name=${app%%.*}
+      daemon=$(read_ini ${SM_DIR}/user/${name}.service Service ExecStart)
+      echo "$name -- $daemon"
+    done
+    ;;
+  # two command to create or remove symbol link from user directory to work directory
+  e|enable)
+    if [ -f ${SM_DIR}/user/${sm_name}.service ]; then
+      ln -sf ${SM_DIR}/user/${sm_name}.service ${SM_DIR}/work/${sm_name}.service
+    else
+      echo "warning, ${sm_name} not found."
+      exit 1
+    fi
+    ;;
+  d|disable)
+    if [ -f ${SM_DIR}/work/${sm_name}.service ]; then
+      rm ${SM_DIR}/work/${sm_name}.service
+    else
+      echo "warning, ${sm_name} not found."
+      exit 1
+    fi
+    ;;    
+  # two all commands, batch do something
+  run-all)
+    applist=$(ls ${SM_DIR}/work/)
+    for app in $applist
+    do
+      name=${app%%.*}
+      sm start $name
+    done
+    ;;
+  kill-all)
+    applist=$(ls ${SM_DIR}/work/)
+    for app in $applist
+    do
+      name=${app%%.*}
+      sm stop $name
+    done
+    ;;
+  r|run|start)
+    if [ "x${sm_name}" == "x" ]; then
+      usage
+      exit 1
+    fi
+    last_pid=`test -f ${SM_DIR}/pid/${sm_name}.pid && cat ${SM_DIR}/pid/${sm_name}.pid` || last_pid=-1
+    ps -p $last_pid > /dev/null 2>&1
+    status=$?
+    if [ $status -eq 0 ]; then
+      echo "\033[32m active (running) \033[0m  $sm_name"
+      ps -f -p $last_pid
+      echo "\033[33m warning \033[0m $sm_name already running."
+      exit 0
+    fi    
+    echo "start $sm_name ..."
+    daemon=$(read_ini ${SM_DIR}/work/${sm_name}.service Service ExecStart) 
+    echo $daemon
+    $daemon > ${SM_DIR}/log/${sm_name}.log 2>&1 &
+    pid=$!
+    echo $pid > ${SM_DIR}/pid/${sm_name}.pid
+    echo "started, pid = ${pid}."
+    ;;
+  re|restart)
+    sm stop $sm_name
+    sleep 3
+    sm start $sm_name
+    ;;     
+  k|kill|stop)
+    if [ "x${sm_name}" == "x" ]; then
+      usage
+      exit 1
+    fi
+    last_pid=`test -f ${SM_DIR}/pid/${sm_name}.pid && cat ${SM_DIR}/pid/${sm_name}.pid` || exit 2
+    ps -p $last_pid > /dev/null 2>&1
+    status=$?
+    if [ $status -ne 0 ]; then
+      echo "(pid=${last_pid}) No such process"
+      test -f ${SM_DIR}/pid/${sm_name}.pid && rm ${SM_DIR}/pid/${sm_name}.pid
+      exit 3
+    fi
+    echo "stop $sm_name (pid=${last_pid}) ... "
+    if [ $last_pid -gt 0 ]; then
+      kill -9 $last_pid && rm ${SM_DIR}/pid/${sm_name}.pid
+    else
+      echo "unknow error to stop"
+      exit 4
+    fi
+    ;;
+  s)
+    if [ "x${sm_name}" == "x" ]; then
+      applist=$(ls ${SM_DIR}/work/)
+      for app in $applist
+      do
+        name=${app%%.*}
+        sm s $name
+      done
+      exit 0
+    fi
+    last_pid=`test -f ${SM_DIR}/pid/${sm_name}.pid && cat ${SM_DIR}/pid/${sm_name}.pid` || last_pid=-1
+    ps -p $last_pid > /dev/null 2>&1
+    status=$?
+    if [ $status -eq 0 ]; then
+      echo "\033[32m active (running) \033[0m [$sm_name] -- $last_pid"
+    else
+      echo "\033[31m inactive \033[0m [$sm_name]"
+    fi
+    ;;
+  status)
+    if [ "x${sm_name}" == "x" ]; then
+      applist=$(ls ${SM_DIR}/work/)
+      for app in $applist
+      do
+        name=${app%%.*}
+        sm status $name
+      done
+      exit 0
+    fi
+    last_pid=`test -f ${SM_DIR}/pid/${sm_name}.pid && cat ${SM_DIR}/pid/${sm_name}.pid` || last_pid=-1
+    ps -p $last_pid > /dev/null 2>&1
+    status=$?
+    if [ $status -eq 0 ]; then
+      line=`ps -f -p $last_pid | tail -n 1`
+      echo "\033[32m active (running) \033[0m [$sm_name] -- $last_pid /${line#*/}"
+    else
+      daemon=$(read_ini ${SM_DIR}/work/${sm_name}.service Service ExecStart)
+      echo "\033[31m inactive \033[0m [$sm_name]  --  $daemon"
+    fi
+    ;;
+  log)
+    if [ "x${sm_name}" == "x" ]; then
+      usage
+      exit 1
+    fi
+    if [ -f ${SM_DIR}/log/${sm_name}.log ]; then
+      tail -n 100 ${SM_DIR}/log/${sm_name}.log
+    else
+      echo "log file ${SM_DIR}/log/${sm_name}.log not found."
+      exit 9
+    fi
+    ;;   
+  *)
+    echo "unknown command: $sm_cmd"
+    usage
+    ;;
+esac
+
+############### svc main end ################
