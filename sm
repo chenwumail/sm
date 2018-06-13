@@ -46,6 +46,13 @@ if [ "x${sm_cmd}" == "x" ]; then
   usage
   exit 1
 fi
+
+ECHO="echo -e"
+os=`uname`
+if [ "${os}" = "Darwin" ]; then
+  ECHO="echo"
+fi
+
 case $sm_cmd in
   # one initilize command, careful for SM_DIR, default is ${HOME}/app
   init)
@@ -139,9 +146,9 @@ case $sm_cmd in
     ps -p $last_pid > /dev/null 2>&1
     status=$?
     if [ $status -eq 0 ]; then
-      echo "\033[32m active (running) \033[0m  $sm_name"
+      $ECHO "\033[32m active (running) \033[0m  $sm_name"
       ps -f -p $last_pid
-      echo "\033[33m warning \033[0m $sm_name already running."
+      $ECHO "\033[33m warning \033[0m $sm_name already running."
       exit 0
     fi    
     echo "start $sm_name ..."
@@ -228,9 +235,9 @@ case $sm_cmd in
     ps -p $last_pid > /dev/null 2>&1
     status=$?
     if [ $status -eq 0 ]; then
-      echo "\033[32m active (running) \033[0m [$sm_name] -- $last_pid"
+      $ECHO "\033[32m active (running) \033[0m [$sm_name] -- $last_pid"
     else
-      echo "\033[31m inactive \033[0m [$sm_name]"
+      $ECHO "\033[31m inactive \033[0m [$sm_name]"
     fi
     ;;
   status)
@@ -248,10 +255,10 @@ case $sm_cmd in
     status=$?
     if [ $status -eq 0 ]; then
       line=`ps -f -p $last_pid | tail -n 1`
-      echo "\033[32m active (running) \033[0m [$sm_name] -- $last_pid /${line#*/}"
+      $ECHO "\033[32m active (running) \033[0m [$sm_name] -- $last_pid /${line#*/}"
     else
       daemon=$(read_ini ${SM_DIR}/work/${sm_name}.service Service ExecStart)
-      echo "\033[31m inactive \033[0m [$sm_name]  --  $daemon"
+      $ECHO "\033[31m inactive \033[0m [$sm_name]  --  $daemon"
     fi
     ;;
   log)

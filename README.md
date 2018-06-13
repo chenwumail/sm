@@ -36,6 +36,7 @@ usage: sm <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
        sm <s|status> [<service-name>]
        sm <e|enable>|<d|disable> <service-name>
        sm <l|list>
+       sm exec <service-name>  # forgrand run service without in ${SM_DIR}/user directory
        sm <init>
 ```
 ## Manual
