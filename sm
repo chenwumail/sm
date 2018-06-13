@@ -3,7 +3,7 @@
 # author: chenwumail@gmail.com 2018
 
 if [ "x${SM_DIR}" == "x" ]; then
-  SM_DIR=${HOME}/sm #default svc dir is /home/{work}/app
+  SM_DIR=${HOME}/sm #default svc dir is /home/{work}/sm
 fi
 
 
@@ -19,8 +19,9 @@ usage() {
   echo "       sm <s|status> [<service-name>]"
   echo "       sm <e|enable>|<d|disable> <service-name>"
   echo "       sm <l|list>"
+  echo "       sm <exec> <service-name>"
   echo "       sm <init>"
-  echo "application manager (app) manual:"
+  echo "Service Manager (sm) Manual:"
   echo "  \${SM_DIR}/user/ -- *.service files, defined by user"
   echo "  \${SM_DIR}/work/ -- symbol link of *.service, it created or deleted by <enable> and <disable> command",
   echo "                    prohibit manually work in this dir for will be removed automaticlly."
@@ -29,6 +30,12 @@ usage() {
   echo "  service file format:"
   echo "    [Service]"
   echo "    ExecStart=<command> [arguments]  -- ONLY ABSOLUTE PATH SUPPORTED."
+  echo "Restart service when crash: "
+  echo "  (1) sm enable sm-monitor"
+  echo "  (2) sm run sm-monitor"
+  echo "  (3) add Restart=always to foo.service"
+  echo "  if foo crash, sm-monitor while restart it, checked every 5 minutes."
+  echo "  don't worry about sm stop <service-name>, it will not be restart automaticlly."
 }
 
 ############### svc main ##################
@@ -46,6 +53,9 @@ case $sm_cmd in
     test -d ${SM_DIR}/work || mkdir -p ${SM_DIR}/work
     test -d ${SM_DIR}/pid  || mkdir -p ${SM_DIR}/pid
     test -d ${SM_DIR}/log  || mkdir -p ${SM_DIR}/log
+    echo "[Service]" > ${SM_DIR}/user/sm-monitor.service
+    echo "ExecStart=/usr/bin/sm monitor" >> ${SM_DIR}/user/sm-monitor.service
+    sm enable sm-monitor
     ;;  
   # two command for app service in user directory
   l)
@@ -65,6 +75,17 @@ case $sm_cmd in
       daemon=$(read_ini ${SM_DIR}/user/${name}.service Service ExecStart)
       echo "$name -- $daemon"
     done
+    ;;
+  # one exec command, foregroud execute service in user directory
+  exec)
+    if [ "x${sm_name}" == "x" ]; then
+      usage
+      exit 1
+    fi  
+    echo "exec $sm_name ..."
+    daemon=$(read_ini ${SM_DIR}/user/${sm_name}.service Service ExecStart) 
+    echo $daemon
+    $daemon
     ;;
   # two command to create or remove symbol link from user directory to work directory
   e|enable)
@@ -89,7 +110,11 @@ case $sm_cmd in
     for app in $applist
     do
       name=${app%%.*}
-      sm start $name
+      if [ "${name}" = "sm-monitor" ]; then
+        echo $name > /dev/null
+      else
+        sm start $name
+      fi
     done
     ;;
   kill-all)
@@ -97,7 +122,11 @@ case $sm_cmd in
     for app in $applist
     do
       name=${app%%.*}
-      sm stop $name
+      if [ "${name}" = "sm-monitor" ]; then
+        echo $name > /dev/null
+      else
+        sm stop $name
+      fi
     done
     ;;
   r|run|start)
@@ -117,8 +146,10 @@ case $sm_cmd in
     echo "start $sm_name ..."
     daemon=$(read_ini ${SM_DIR}/work/${sm_name}.service Service ExecStart) 
     echo $daemon
+    cd ${SM_DIR}
     $daemon > ${SM_DIR}/log/${sm_name}.log 2>&1 &
     pid=$!
+    cd -
     echo $pid > ${SM_DIR}/pid/${sm_name}.pid
     echo "started, pid = ${pid}."
     ;;
@@ -126,6 +157,36 @@ case $sm_cmd in
     sm stop $sm_name
     sleep 3
     sm start $sm_name
+    ;;
+  monitor) # don't run it manaully, run by "sm run sm-monitor".
+    while true
+    do
+      sleep 300
+      sm monitor-always
+    done
+    ;;
+  monitor-always) # don't run it manaully, it will called by monitor command.
+    applist=$(ls ${SM_DIR}/work/)
+    for app in $applist
+    do
+      name=${app%%.*}
+      always=$(read_ini ${SM_DIR}/work/${name}.service Service Restart)
+      if [ "x${always}" = "xalways" ]; then
+        if [ -f ${SM_DIR}/pid/${name}.pid ]; then
+
+          last_pid=`test -f ${SM_DIR}/pid/${name}.pid && cat ${SM_DIR}/pid/${name}.pid` || last_pid=-1
+          ps -p $last_pid > /dev/null 2>&1
+          status=$?
+          if [ $status -eq 0 ]; then
+            echo $name > /dev/null
+          else
+            echo "start crashed process."
+            sm run $name   
+          fi
+
+        fi # else no pid file,ignore
+      fi # else not always restart, ignore
+    done    
     ;;     
   k|kill|stop)
     if [ "x${sm_name}" == "x" ]; then

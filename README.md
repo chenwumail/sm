@@ -21,13 +21,13 @@ EOF
 ```
  * (4) "sm enable foo" to enable foo service.
  * (5) "sm run foo" to run foo service.
->> start foo ...
->> /usr/bin/tail -f /var/log/system.log
->> started, pid = 14648.
+> start foo ...
+> /usr/bin/tail -f /var/log/system.log
+> started, pid = 14648.
  * (6) "sm status foo" to show status of foo service.
->> active (running)  [foo] -- 14648 /usr/bin/tail -f /var/log/system.log
+> active (running)  [foo] -- 14648 /usr/bin/tail -f /var/log/system.log
  * (7) "sm kill foo" to stop foo service.
->> stop foo (pid=14648) ...
+> stop foo (pid=14648) ...
 
 ## Usage
 ```
