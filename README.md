@@ -49,7 +49,7 @@ usage: sm <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
   service file format:
     [Service]
     ExecStart=<command> [arguments]  -- ONLY ABSOLUTE PATH SUPPORTED.
-  Restart service when crash: 
+  Auto Restart service when crash: 
   (1) sm enable sm-monitor  # sm init will generate $HOME/sm/user/sm-monitor.service and enable it
   (2) sm run sm-monitor
   (3) add Restart=always to foo.service
