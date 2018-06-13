@@ -30,6 +30,7 @@ usage() {
   echo "  service file format:"
   echo "    [Service]"
   echo "    ExecStart=<command> [arguments]  -- ONLY ABSOLUTE PATH SUPPORTED."
+  echo "    WorkingDirectory= -- OPTIONAL, ABSOLUTE PATH, default is ${SM_DIR} when not set"
   echo "Restart service when crash: "
   echo "  (1) sm enable sm-monitor"
   echo "  (2) sm run sm-monitor"
@@ -144,9 +145,13 @@ case $sm_cmd in
       exit 0
     fi    
     echo "start $sm_name ..."
-    daemon=$(read_ini ${SM_DIR}/work/${sm_name}.service Service ExecStart) 
+    daemon=$(read_ini ${SM_DIR}/work/${sm_name}.service Service ExecStart)
+    workdir=$(read_ini ${SM_DIR}/work/${sm_name}.service Service WorkingDirectory)
+    if [ "x${workdir}" = "x" ]; then
+      workdir=${SM_DIR}
+    fi
     echo $daemon
-    cd ${SM_DIR}
+    cd $workdir
     $daemon > ${SM_DIR}/log/${sm_name}.log 2>&1 &
     pid=$!
     cd -

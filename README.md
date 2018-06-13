@@ -49,6 +49,8 @@ usage: sm <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
   service file format:
     [Service]
     ExecStart=<command> [arguments]  -- ONLY ABSOLUTE PATH SUPPORTED.
+    WorkingDirectory=/home/user/sm -- OPTIONAL, default is ${SM_DIR} when not set
+    Restart=never -- OPTIONAL, default is never, set always will be restart when sm-monitor is running  
   Auto Restart service when crash: 
   (1) sm enable sm-monitor  # sm init will generate $HOME/sm/user/sm-monitor.service and enable it
   (2) sm run sm-monitor
