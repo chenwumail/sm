@@ -21,7 +21,7 @@ usage() {
   echo "       sm <exec> <service-name>"
   echo "       sm <init>"
   echo "Service Manager (sm) Manual:"
-  echo "  \${SM_DIR}/user/ -- *.service files, defined by user"
+  echo "  \${SM_DIR}/user/ -- *.service files, defined by user, service-name same with filename without postfix(.service)"
   echo "  \${SM_DIR}/work/ -- symbol link of *.service, it created or deleted by <enable> and <disable> command",
   echo "                    prohibit manually work in this dir for will be removed automaticlly."
   echo "  \${SM_DIR}/pid/ -- *.pid files, auto generated"
@@ -36,6 +36,17 @@ usage() {
   echo "  (3) add Restart=always to foo.service"
   echo "  if foo crash, sm-monitor while restart it, checked every 5 minutes."
   echo "  don't worry about sm stop <service-name>, it will not be restart automaticlly."
+  echo "Serivce Group:"
+  echo "  enable a service prefix with a sub-dir, it will create symbol link in sub-dir of work directory."
+  echo "  user directory not support sub-dir. it can be run-all or kill-all independent, example: "
+  echo "  (1) sm enable test/foo -- enable $SM_DIR/user/foo.service to $SM_DIR/work/test/foo.service"
+  echo "  (2) sm enable test/bar"
+  echo "  (3) sm run-all test -- start all service in test sub directory"
+  echo "  (4) sm kill-all nosub -- will stop-all service in work directory without sub-directory."
+  echo "  usage(with more description): sm <r|run|start>|<k|kill|stop>|<re|restart> [work-subdir-name/]<service-name>"
+  echo "       sm <run-all|start-all>|<kill-all|stop-app> [<work-subdir-name>|nosub]"
+  echo "       sm <s|status> [[work-subdir-name/]<service-name>|<work-subdir-name>|nosub]"
+  echo "       sm <e|enable>|<d|disable> [work-subdir-name/]<service-name>" 
 }
 
 ############### svc main ##################
