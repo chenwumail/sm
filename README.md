@@ -62,10 +62,13 @@ usage: sm <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
 ## Service Group Management
   enable a service prefix with a sub-dir, it will create symbol link in sub-dir of work directory.
   user directory not support sub-dir. it can be run-all or kill-all independent, example: 
->  (1) sm enable test/foo -- enable /Users/renren/sm/user/foo.service to /Users/renren/sm/work/test/foo.service
->  (2) sm enable test/bar
->  (3) sm run-all test -- start all service in test sub directory
->  (4) sm kill-all nosub -- will stop-all service in work directory without sub-directory.
+* (1) sm enable test/foo
+> enable /Users/renren/sm/user/foo.service to /Users/renren/sm/work/test/foo.service
+* (2) sm enable test/bar
+* (3) sm run-all test
+>  start all service in test sub directory
+* (4) sm kill-all nosub
+> will stop-all service in work directory without sub-directory.
 ```
   usage(with more description): sm <r|run|start>|<k|kill|stop>|<re|restart> [work-subdir-name/]<service-name>
        sm <run-all|start-all>|<kill-all|stop-app> [<work-subdir-name>|nosub]
