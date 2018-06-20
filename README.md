@@ -3,7 +3,7 @@
 Management user service like systemd.
 
 ## Tech Notes
- * use ```$ExecStarCommand > ${SM_DIR}/log/${SERVICE_NAME}.log  2>&1 &&``` command to execute user define command, stdout and stderr redirected to log file.
+ * use ```$ExecStarCommand > ${SM_DIR}/log/${SERVICE_NAME}.log  2>&1 &``` command to execute user defined command, stdout and stderr redirected to log file.
  * use SERVICE_NAME to management service instead of type long command line,
     the command line saved in ${SM_DIR}/user/*.service file, such as foo.service, SERVICE_NAME is "foo".
  * use pid to monitor the status of service,
@@ -57,5 +57,5 @@ usage: sm <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
   (2) sm run sm-monitor
   (3) add Restart=always to foo.service
   if foo crash, sm-monitor while restart it, checked every 5 minutes.
-  don't worry about sm stop <service-name>, it will not be restart automaticlly.  
+  don't worry about sm kill <service-name>, it will not be restart automaticlly.  
 ```
