@@ -1,15 +1,25 @@
 #!/bin/sh
 # version 1.0  License: GPL 2.0
 # author: chenwumail@gmail.com 2018
+# TODO: 
+# (1) sm-monitor support systemd.
 
-if [ "x${SM_DIR}" = "x" ]; then
-  SM_DIR=${HOME}/sm #default svc dir is /home/{work}/sm
-fi
+[ -z "${SM_DIR}" ] && SM_DIR=${HOME}/sm #default svc dir is /home/{work}/sm
 
 read_ini () {
   file=$1;section=$2;item=$3;
   val=$(awk -F '=' '/\['${section}'\]/{a=1} (a==1 && "'${item}'"==$1){print}' ${file}) 
   echo ${val#*=}
+}
+die () {
+  retcode=$1
+  msg=$2
+  echo "${msg}"
+  exit ${retcode}
+}
+die_usage() {
+  usage
+  exit 1
 }
 usage() {
   echo "SM_DIR=${SM_DIR}"
@@ -36,7 +46,7 @@ usage() {
   echo "  (3) add Restart=always to foo.service"
   echo "  if foo crash, sm-monitor while restart it, checked every 5 minutes."
   echo "  don't worry about sm stop <service-name>, it will not be restart automaticlly."
-  echo "Serivce Group:"
+  echo "Serivce Group Management:"
   echo "  enable a service prefix with a sub-dir, it will create symbol link in sub-dir of work directory."
   echo "  user directory not support sub-dir. it can be run-all or kill-all independent, example: "
   echo "  (1) sm enable test/foo -- enable $SM_DIR/user/foo.service to $SM_DIR/work/test/foo.service"
@@ -52,22 +62,16 @@ usage() {
 ############### svc main ##################
 sm_cmd=$1
 sm_name=$2
-if [ "x${sm_cmd}" = "x" ]; then
-  usage
-  exit 1
-fi
 
-sm_dir=""
+[ -z "${sm_cmd}" ] && die_usage
+
 sm_short_name=${sm_name#*/}
-if [ ! $sm_name = $sm_short_name ]; then
-  sm_dir=${sm_name%/*}
-fi
+sm_dir=""
+[ ! $sm_name = $sm_short_name ] && sm_dir=${sm_name%/*}
 
-ECHO="echo -e"
 os=`uname`
-if [ "${os}" = "Darwin" ]; then
-  ECHO="echo"
-fi
+ECHO="echo -e"
+[ "${os}" = "Darwin" ] && ECHO="echo"
 
 IGNORE_SUBDIR="nosub"
 
@@ -104,36 +108,29 @@ case $sm_cmd in
     ;;
   # one exec command, foregroud execute service in user directory
   exec)
-    if [ "x${sm_name}" = "x" ]; then
-      usage
-      exit 1
-    fi  
+    [ -z "${sm_name}" ] && die_usage
+    [ ! -f ${SM_DIR}/user/${sm_short_name}.service ] && die 2 "${SM_DIR}/user/${sm_short_name}.service not found."
     echo "exec $sm_name ..."
-    daemon=$(read_ini ${SM_DIR}/user/${sm_short_name}.service Service ExecStart) 
+    daemon=$(read_ini ${SM_DIR}/user/${sm_short_name}.service Service ExecStart)
+    [ -z "${daemon}" ] && die 3 "ExecStart not in Service section, or blank."
     echo $daemon
     $daemon
     ;;
   # two command to create or remove symbol link from user directory to work directory
   e|enable)
-    if [[ -n "${sm_dir}" && ! -d ${SM_DIR}/work/${sm_dir} ]]; then
-      mkdir -p ${SM_DIR}/work/${sm_dir}
-      mkdir -p ${SM_DIR}/pid/${sm_dir}
-      mkdir -p ${SM_DIR}/log/${sm_dir}
+    [ -z "${sm_name}" ] && die_usage
+    if [ -n "${sm_dir}" ]; then
+      test -d ${SM_DIR}/work/${sm_dir} || mkdir -p ${SM_DIR}/work/${sm_dir}
+      test -d ${SM_DIR}/pid/${sm_dir}  || mkdir -p ${SM_DIR}/pid/${sm_dir}
+      test -d ${SM_DIR}/log/${sm_dir}  || mkdir -p ${SM_DIR}/log/${sm_dir}
     fi
-    if [ -f ${SM_DIR}/user/${sm_short_name}.service ]; then
-      ln -sf ${SM_DIR}/user/${sm_short_name}.service ${SM_DIR}/work/${sm_name}.service
-    else
-      echo "warning, ${sm_name} not found."
-      exit 1
-    fi
+    [ ! -f ${SM_DIR}/user/${sm_short_name}.service ] && die 2 "${SM_DIR}/user/${sm_short_name}.service not found."
+    ln -sf ${SM_DIR}/user/${sm_short_name}.service ${SM_DIR}/work/${sm_name}.service
     ;;
   d|disable)
-    if [ -f ${SM_DIR}/work/${sm_name}.service ]; then
-      rm ${SM_DIR}/work/${sm_name}.service
-    else
-      echo "warning, ${sm_name} not found."
-      exit 1
-    fi
+    [ -z "${sm_name}" ] && die_usage
+    [ ! -f ${SM_DIR}/work/${sm_name}.service ] && die 2 "${SM_DIR}/user/${sm_short_name}.service not found."
+    rm ${SM_DIR}/work/${sm_name}.service
     ;;    
   # two all commands, batch do something
   run-all|start-all)
@@ -169,13 +166,9 @@ case $sm_cmd in
       do
         name=${app%%.*}
         if [ -d ${SM_DIR}/work/${name} ]; then
-          if [ ! "x${sm_name}" = "x${IGNORE_SUBDIR}" ]; then
-            sm kill-all $name
-          fi
+          [ ! "x${sm_name}" = "x${IGNORE_SUBDIR}" ] && sm kill-all $name
         else
-          if [ ! "${name}" = "sm-monitor" ]; then
-            sm kill $name
-          fi
+          [ ! "${name}" = "sm-monitor" ] && sm kill $name
         fi
       done
       exit 0
@@ -191,10 +184,8 @@ case $sm_cmd in
     fi
     ;;
   r|run|start)
-    if [ "x${sm_name}" = "x" ]; then
-      usage
-      exit 1
-    fi
+    [ -z "${sm_name}" ] && die_usage
+    [ ! -f ${SM_DIR}/work/${sm_name}.service ] && die 2 "${SM_DIR}/work/${sm_name}.service not found."
     last_pid=`test -f ${SM_DIR}/pid/${sm_name}.pid && cat ${SM_DIR}/pid/${sm_name}.pid` || last_pid=-1
     ps -p $last_pid > /dev/null 2>&1
     status=$?
@@ -224,29 +215,44 @@ case $sm_cmd in
     sm start $sm_name
     ;;
   monitor) # don't run it manaully, run by "sm run sm-monitor".
+    echo "$(date -R) monitor started."
     while true
     do
       sleep 300
+      # echo "$(date -R) monitor running."
       sm monitor-always
+      # echo "$(date -R) monitor finished."
     done
     ;;
   monitor-always) # don't run it manaully, it will called by monitor command.
-    applist=$(ls ${SM_DIR}/work/)
+    monitor_dir=${SM_DIR}/work/
+    [ -n ${sm_name} ] && monitor_dir=${SM_DIR}/work/${sm_name}
+    applist=$(ls ${monitor_dir})
     for app in $applist
     do
       name=${app%%.*}
-      always=$(read_ini ${SM_DIR}/work/${name}.service Service Restart)
+      if [ -d ${SM_DIR}/work/${name} ]; then
+        [ "${SM_DIR}/work/" = "${monitor_dir}" ] && sm monitor-always ${name} # only support one level subdir
+        continue
+      fi
+      service_name=$name
+      [ -n "${sm_name}" ] && service_name=$sm_name/$name
+      if [ ! -f ${SM_DIR}/work/${service_name}.service ]; then
+       echo "${SM_DIR}/work/${service_name}.service not found."
+       continue
+      fi
+      always=$(read_ini ${SM_DIR}/work/${service_name}.service Service Restart)
       if [ "x${always}" = "xalways" ]; then
-        if [ -f ${SM_DIR}/pid/${name}.pid ]; then
+        if [ -f ${SM_DIR}/pid/${service_name}.pid ]; then
 
-          last_pid=`test -f ${SM_DIR}/pid/${name}.pid && cat ${SM_DIR}/pid/${name}.pid` || last_pid=-1
+          last_pid=`test -f ${SM_DIR}/pid/${service_name}.pid && cat ${SM_DIR}/pid/${service_name}.pid` || last_pid=-1
           ps -p $last_pid > /dev/null 2>&1
           status=$?
           if [ $status -eq 0 ]; then
-            echo $name > /dev/null
-          else
-            echo "start crashed process."
-            sm run $name   
+            echo $service_name > /dev/null
+          else            
+            echo "$(date -R) starting crashed process ${service_name} ..."
+            sm run $service_name   
           fi
 
         fi # else no pid file,ignore
@@ -254,10 +260,7 @@ case $sm_cmd in
     done    
     ;;     
   k|kill|stop)
-    if [ "x${sm_name}" = "x" ]; then
-      usage
-      exit 1
-    fi
+    [ -z "${sm_name}" ] && die_usage
     last_pid=`test -f ${SM_DIR}/pid/${sm_name}.pid && cat ${SM_DIR}/pid/${sm_name}.pid` || exit 2
     ps -p $last_pid > /dev/null 2>&1
     status=$?
@@ -326,20 +329,12 @@ case $sm_cmd in
     fi
     ;;
   log)
-    if [ "x${sm_name}" = "x" ]; then
-      usage
-      exit 1
-    fi
-    if [ -f ${SM_DIR}/log/${sm_name}.log ]; then
-      tail -n 100 ${SM_DIR}/log/${sm_name}.log
-    else
-      echo "log file ${SM_DIR}/log/${sm_name}.log not found."
-      exit 9
-    fi
+    [ -z "${sm_name}" ] && die_usage
+    [ ! -f  ${SM_DIR}/log/${sm_name}.log ] && die 2 "${SM_DIR}/log/${sm_name}.log not found."
+    tail -n 100 ${SM_DIR}/log/${sm_name}.log
     ;;   
   *)
-    echo "unknown command: $sm_cmd"
-    usage
+    echo "unknown sm command: $sm_cmd, try \"sm\" to get more help."
     ;;
 esac
 
