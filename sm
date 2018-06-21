@@ -1,8 +1,6 @@
 #!/bin/sh
 # version 1.0  License: GPL 2.0
 # author: chenwumail@gmail.com 2018
-# TODO: 
-# (1) sm-monitor support systemd.
 
 [ -z "${SM_DIR}" ] && SM_DIR=${HOME}/sm #default svc dir is /home/{work}/sm
 
@@ -83,8 +81,14 @@ case $sm_cmd in
     test -d ${SM_DIR}/work || mkdir -p ${SM_DIR}/work
     test -d ${SM_DIR}/pid  || mkdir -p ${SM_DIR}/pid
     test -d ${SM_DIR}/log  || mkdir -p ${SM_DIR}/log
-    echo "[Service]" > ${SM_DIR}/user/sm-monitor.service
+
+    echo "[Service]"      > ${SM_DIR}/user/sm-monitor.service
     echo "ExecStart=/usr/bin/sm monitor" >> ${SM_DIR}/user/sm-monitor.service
+    echo "Restart=always" >> ${SM_DIR}/user/sm-monitor.service
+    echo "User=$(whoami)" >> ${SM_DIR}/user/sm-monitor.service
+    echo ""               >> ${SM_DIR}/user/sm-monitor.service
+    echo "[Install]"      >> ${SM_DIR}/user/sm-monitor.service
+    echo "WantedBy=default.target"      >> ${SM_DIR}/user/sm-monitor.service
     sm enable sm-monitor
     ;;  
   # two command for app service in user directory

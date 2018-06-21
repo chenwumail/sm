@@ -58,6 +58,23 @@ usage: sm <r|run|start>|<k|kill|stop>|<re|restart> <service-name>
   (3) add Restart=always to foo.service
   if foo crash, sm-monitor while restart it, checked every 5 minutes.
   don't worry about sm kill <service-name>, it will not be restart automaticlly.  
+
+  Use systemd monitor the serivce:
+    /usr/bin/sm init
+    sudo cp ~/sm/user/sm-monitor.service /lib/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable sm-monitor
+    sudo systemctl start sm-monitor
+    sudo systemctl status sm-monitor
+
+  Content of sm-monitor.service:
+    [Service]
+    ExecStart=/usr/bin/sm monitor
+    Restart=always
+    User={username}
+
+    [Install]
+    WantedBy=default.target
 ```
 ## Service Group Management
   enable a service prefix with a sub-dir, it will create symbol link in sub-dir of work directory.
