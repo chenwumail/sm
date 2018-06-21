@@ -68,7 +68,7 @@ sm_dir=""
 [ ! $sm_name = $sm_short_name ] && sm_dir=${sm_name%/*}
 
 os=`uname`
-ECHO="echo -e"
+ECHO="/bin/echo -e"
 [ "${os}" = "Darwin" ] && ECHO="echo"
 
 IGNORE_SUBDIR="nosub"
