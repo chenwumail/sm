@@ -60,8 +60,22 @@ usage() {
 ############### svc main ##################
 sm_cmd=$1
 sm_name=$2
+arg_numbers=$#
 
 [ -z "${sm_cmd}" ] && die_usage
+
+if [ $arg_numbers -gt 2 ]; then
+  sm_svcs=${@:2}
+  multi_cmds="|r|run|start|k|kill|stop|s|status|"
+  echo $multi_cmds | grep "|${sm_cmd}|" > /dev/null
+  is_exists=$?
+  [ $is_exists -ne 0 ] && die 1 "too many arguments!"
+  for item_name in $sm_svcs
+  do
+    sm $sm_cmd $item_name
+  done
+  exit 0
+fi
 
 sm_short_name=${sm_name#*/}
 sm_dir=""
